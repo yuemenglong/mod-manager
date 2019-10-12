@@ -1,3 +1,5 @@
 .idea/
-scala-test.iml
 target/
+conf.properties
+db.sqlite
+mod-manager.iml

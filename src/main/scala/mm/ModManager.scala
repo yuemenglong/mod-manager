@@ -39,7 +39,7 @@ class BatchFile {
   var act: String = _
 }
 
-object ModOrganizer extends SimpleSwingApplication {
+object ModManager extends SimpleSwingApplication {
   val storeDir: String = ConfLoader.loadConf("store-dir", getAbsolutePath("store"))
   val backupDir: String = ConfLoader.loadConf("backup-dir", getAbsolutePath("backup"))
   val trashDir: String = ConfLoader.loadConf("trash-dir", getAbsolutePath("trash"))
