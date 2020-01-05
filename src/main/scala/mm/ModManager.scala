@@ -12,6 +12,7 @@ import io.github.yuemenglong.orm.lang.types.Types._
 import javax.swing.table.DefaultTableModel
 
 import scala.collection.mutable.ArrayBuffer
+import scala.swing.Dialog.{Result, showConfirmation}
 import scala.swing.FileChooser.SelectionMode
 import scala.swing.event.{ButtonClicked, TableRowsSelected}
 import scala.swing.{FileChooser, _}
@@ -206,6 +207,12 @@ object ModManager extends SimpleSwingApplication {
     val idx = batchView.selection.rows.leadIndex
     if (idx < 0 || idx >= batchs.length) {
       return
+    }
+    showConfirmation(panel,
+      "确认删除?",
+      "确认") match {
+      case Result.No => return
+      case Result.Yes =>
     }
     val batch = batchs(idx)
     val ps = batch.files.map(_.path)
