@@ -1,5 +1,5 @@
 .idea/
 target/
-conf.properties
+*.properties
 db.sqlite
 mod-manager.iml

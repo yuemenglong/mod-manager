@@ -40,11 +40,13 @@ class BatchFile {
 }
 
 object ModManager extends SimpleSwingApplication {
-  val storeDir: String = ConfLoader.loadConf("store-dir", getAbsolutePath("store"))
-  val backupDir: String = ConfLoader.loadConf("backup-dir", getAbsolutePath("backup"))
-  val trashDir: String = ConfLoader.loadConf("trash-dir", getAbsolutePath("trash"))
-  val dbPath: String = ConfLoader.loadConf("db-path", getAbsolutePath("db.sqlite"))
-  var lastChoose: String = ConfLoader.loadConf("last-choose", getAbsolutePath(""))
+
+  val loader = ConfLoader.instance()
+  val storeDir: String = loader.loadConf("store-dir", getAbsolutePath("store"))
+  val backupDir: String = loader.loadConf("backup-dir", getAbsolutePath("backup"))
+  val trashDir: String = loader.loadConf("trash-dir", getAbsolutePath("trash"))
+  val dbPath: String = loader.loadConf("db-path", getAbsolutePath("db.sqlite"))
+  var lastChoose: String = loader.loadConf("last-choose", getAbsolutePath(""))
 
   new File(storeDir).mkdirs()
   new File(backupDir).mkdirs()
@@ -87,7 +89,6 @@ object ModManager extends SimpleSwingApplication {
     case ButtonClicked(`viewButton`) =>
       view()
   }
-
 
   val output: TextArea = new TextArea(5, 40) {
     editable = false
@@ -165,7 +166,7 @@ object ModManager extends SimpleSwingApplication {
     val backupRoot = Paths.get(backupDir, relBackup).toString
     new File(backupRoot).mkdir()
     lastChoose = selectRoot
-    ConfLoader.saveConf("last-choose", lastChoose)
+    loader.saveConf("last-choose", lastChoose)
 
     val batch = new Batch
     batch.name = fc.selectedFile.getName

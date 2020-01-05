@@ -1,17 +1,27 @@
 package mm
 
-import java.io.{File, FileInputStream, FileOutputStream, InputStream}
+import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.Properties
 
 object ConfLoader {
-  val CONF_NAME = "conf.properties"
+  var ins: ConfLoader = _
+
+  def instance(): ConfLoader = {
+    if (ins == null) {
+      ins = new ConfLoader("conf.properties")
+    }
+    ins
+  }
+}
+
+class ConfLoader(confName: String) {
   val properties = new Properties()
-  if (new File(CONF_NAME).exists()) {
-    val is = new FileInputStream(CONF_NAME)
+  if (new File(confName).exists()) {
+    val is = new FileInputStream(confName)
     properties.load(is)
     is.close()
   } else {
-    val os = new FileOutputStream(CONF_NAME)
+    val os = new FileOutputStream(confName)
     os.close()
   }
 
@@ -28,7 +38,7 @@ object ConfLoader {
   }
 
   def sync(): Unit = {
-    val os = new FileOutputStream(CONF_NAME)
+    val os = new FileOutputStream(confName)
     properties.store(os, "")
     os.close()
   }
