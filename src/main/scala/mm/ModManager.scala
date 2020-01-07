@@ -9,10 +9,12 @@ import io.github.yuemenglong.orm.Orm
 import io.github.yuemenglong.orm.db.Db
 import io.github.yuemenglong.orm.lang.anno.{Entity, Id, OneToMany}
 import io.github.yuemenglong.orm.lang.types.Types._
+import javax.swing.{Box, JLabel, JPanel, JTextField}
 import javax.swing.table.DefaultTableModel
+import mm.ModManager.{lastChoose, mainPanel}
 
 import scala.collection.mutable.ArrayBuffer
-import scala.swing.Dialog.{Result, showConfirmation}
+import scala.swing.Dialog.{Result, showConfirmation, showOptions}
 import scala.swing.FileChooser.SelectionMode
 import scala.swing.event.{ButtonClicked, TableRowsSelected}
 import scala.swing.{FileChooser, _}
@@ -42,7 +44,7 @@ class BatchFile {
 
 object ModManager extends SimpleSwingApplication {
 
-  val loader = ConfLoader.instance()
+  val loader: ConfLoader = ConfLoader.instance()
   val storeDir: String = loader.loadConf("store-dir", getAbsolutePath("store"))
   val backupDir: String = loader.loadConf("backup-dir", getAbsolutePath("backup"))
   val trashDir: String = loader.loadConf("trash-dir", getAbsolutePath("trash"))
@@ -81,12 +83,15 @@ object ModManager extends SimpleSwingApplication {
   val addButton = new Button("Add")
   val removeButton = new Button("Remove")
   val viewButton = new Button("View")
-  listenTo(addButton, removeButton, viewButton)
+  val extractButton = new Button("Extract")
+  listenTo(addButton, removeButton, extractButton, viewButton)
   reactions += {
     case ButtonClicked(`addButton`) =>
       add()
     case ButtonClicked(`removeButton`) =>
       remove()
+    case ButtonClicked(`extractButton`) =>
+      extract()
     case ButtonClicked(`viewButton`) =>
       view()
   }
@@ -103,11 +108,12 @@ object ModManager extends SimpleSwingApplication {
       fileView.model = fileModel
   }
 
-  val panel: BoxPanel = new BoxPanel(Orientation.Horizontal) {
+  val mainPanel: BoxPanel = new BoxPanel(Orientation.Horizontal) {
     contents += new BoxPanel(Orientation.Vertical) {
       contents += new BoxPanel(Orientation.Horizontal) {
         contents += addButton
         contents += removeButton
+        contents += extractButton
       }
       contents += new ScrollPane(batchView)
     }
@@ -120,24 +126,24 @@ object ModManager extends SimpleSwingApplication {
 
   override def top: Frame = new MainFrame() {
     title = "ModOrganizer"
-    contents = panel
+    contents = mainPanel
   }
 
   def refreshBatchView(): Unit = {
     batchView.model = batchModel
   }
 
-  def scan(file: File): Array[File] = {
+  def scanDir(file: File): Array[File] = {
     file.listFiles().flatMap(f => f.isFile match {
       case true => Array(f)
-      case false => scan(f)
+      case false => scanDir(f)
     })
   }
 
-  def delete(file: File): Unit = {
+  def deleteDir(file: File): Unit = {
     file.listFiles().foreach(f => {
       if (f.isDirectory) {
-        delete(f)
+        deleteDir(f)
       } else {
         f.delete()
       }
@@ -158,7 +164,7 @@ object ModManager extends SimpleSwingApplication {
     val fc = new FileChooser()
     fc.fileSelectionMode = SelectionMode.DirectoriesOnly
     fc.selectedFile = new File(lastChoose)
-    val res: FileChooser.Result.Value = fc.showOpenDialog(panel)
+    val res: FileChooser.Result.Value = fc.showOpenDialog(mainPanel)
     if (res != FileChooser.Result.Approve) {
       return
     }
@@ -173,7 +179,7 @@ object ModManager extends SimpleSwingApplication {
     batch.name = fc.selectedFile.getName
     batch.backup = relBackup
     batch.timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
-    batch.files = scan(fc.selectedFile).map(f => {
+    batch.files = scanDir(fc.selectedFile).map(f => {
       val bf = new BatchFile
       val relPath = f.getAbsolutePath.replace(selectRoot, "")
       val fStorePath = Paths.get(storeDir, relPath)
@@ -208,7 +214,7 @@ object ModManager extends SimpleSwingApplication {
     if (idx < 0 || idx >= batchs.length) {
       return
     }
-    showConfirmation(panel,
+    showConfirmation(mainPanel,
       "确认删除?",
       "确认") match {
       case Result.No => return
@@ -251,7 +257,7 @@ object ModManager extends SimpleSwingApplication {
     })
     val backupRoot = Paths.get(backupDir, batch.backup)
     try {
-      delete(backupRoot.toFile)
+      deleteDir(backupRoot.toFile)
     } catch {
       case e: Throwable => output.text += s"${e}\nDelete Backup: ${backupRoot} Fail\n"
     }
@@ -259,7 +265,6 @@ object ModManager extends SimpleSwingApplication {
     batchs.remove(idx)
     refreshBatchView()
   }
-
 
   def view(): Unit = {
     val batch = {
@@ -280,4 +285,89 @@ object ModManager extends SimpleSwingApplication {
     output.text = path
     Runtime.getRuntime.exec(s"cmd /c start explorer ${path}")
   }
+
+  def extract(): Unit = {
+    //    val fc = new FileChooser()
+    //    fc.fileSelectionMode = SelectionMode.DirectoriesOnly
+    //    fc.selectedFile = new File(loader.loadConf("last-choose", getAbsolutePath("")))
+    //    val res: FileChooser.Result.Value = fc.showOpenDialog(mainPanel)
+    //    if (res != FileChooser.Result.Approve) {
+    //      return
+    //    }
+    //    val extractPath = fc.selectedFile.getAbsolutePath
+    //    loader.saveConf("last-extract", extractPath)
+    //    val dialog = new Dialog(top)
+    //    dialog.contents = new Button("Close") {
+    //      dialog.close()
+    //    }
+    //    dialog.open()
+    new ExtractDialog(loader)
+    println("asdf")
+  }
+}
+
+class ExtractDialog(loader: ConfLoader) extends Dialog {
+  var rootPath: String = loader.loadConf("extract-root", new File("").getAbsolutePath)
+  var targetPath: String = loader.loadConf("extract-target", new File("").getAbsolutePath)
+  val rootPathField = new TextField
+  val listPathField = new TextField
+  val abdataPathField = new TextField
+
+  title = "Extract"
+  modal = true
+
+  contents = new BorderPanel {
+    layout(new BoxPanel(Orientation.Vertical) {
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += new Label("rootPath")
+        contents += Button("Select") {
+          val fc = new FileChooser()
+          fc.selectedFile = new File(rootPath)
+          fc.fileSelectionMode = SelectionMode.DirectoriesOnly
+          val res: FileChooser.Result.Value = fc.showOpenDialog(this)
+          if (res == FileChooser.Result.Approve) {
+            rootPath = fc.selectedFile.getAbsolutePath
+            loader.saveConf("extract-root", rootPath)
+          }
+        }
+      }
+      contents += new Label(rootPath)
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += new Label("targetPath")
+        contents += Button("Select") {
+          val fc = new FileChooser()
+          fc.selectedFile = new File(targetPath)
+          fc.fileSelectionMode = SelectionMode.DirectoriesOnly
+          val res: FileChooser.Result.Value = fc.showOpenDialog(this)
+          if (res == FileChooser.Result.Approve) {
+            targetPath = fc.selectedFile.getAbsolutePath
+            loader.saveConf("extract-target", targetPath)
+          }
+        }
+      }
+      contents += new Label(targetPath)
+      contents += new Label("listPath")
+      contents += listPathField
+      contents += new Label("abdataPath")
+      contents += abdataPathField
+    }) = BorderPanel.Position.Center
+
+    layout(new BoxPanel(Orientation.Horizontal) {
+      contents += Button("Extract") {
+        extract()
+        close()
+      }
+      contents += Button("Cancel") {
+        close()
+      }
+    }) = BorderPanel.Position.South
+  }
+
+  def extract(): Unit = {
+    val listPath = Paths.get(rootPath, "abdata/list", listPathField.text)
+    Dialog.showMessage(this, "Wrong username or password!", "Login Error", Dialog.Message.Error)
+  }
+
+  //  centerOnScreen()
+  open()
 }
