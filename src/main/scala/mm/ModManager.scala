@@ -307,9 +307,8 @@ object ModManager extends SimpleSwingApplication {
 }
 
 class ExtractDialog(loader: ConfLoader) extends Dialog {
-  var rootPath: String = loader.loadConf("extract-root", new File("").getAbsolutePath)
-  var targetPath: String = loader.loadConf("extract-target", new File("").getAbsolutePath)
-  val rootPathField = new TextField
+  var rootPathField = new TextField(loader.loadConf("extract-root", new File("").getAbsolutePath))
+  var targetPathField = new TextField(loader.loadConf("extract-target", new File("").getAbsolutePath))
   val listPathField = new TextField
   val abdataPathField = new TextField
 
@@ -318,34 +317,34 @@ class ExtractDialog(loader: ConfLoader) extends Dialog {
 
   contents = new BorderPanel {
     layout(new BoxPanel(Orientation.Vertical) {
-      contents += new BoxPanel(Orientation.Horizontal) {
-        contents += new Label("rootPath")
-        contents += Button("Select") {
+      contents += new BorderPanel {
+        layout(new Label("rootPath")) = BorderPanel.Position.Center
+        layout(Button("Select") {
           val fc = new FileChooser()
-          fc.selectedFile = new File(rootPath)
+          fc.selectedFile = new File(rootPathField.text)
           fc.fileSelectionMode = SelectionMode.DirectoriesOnly
           val res: FileChooser.Result.Value = fc.showOpenDialog(this)
           if (res == FileChooser.Result.Approve) {
-            rootPath = fc.selectedFile.getAbsolutePath
-            loader.saveConf("extract-root", rootPath)
+            rootPathField.text = fc.selectedFile.getAbsolutePath
+            loader.saveConf("extract-root", rootPathField.text)
           }
-        }
+        }) = BorderPanel.Position.East
       }
-      contents += new Label(rootPath)
-      contents += new BoxPanel(Orientation.Horizontal) {
-        contents += new Label("targetPath")
-        contents += Button("Select") {
+      contents += rootPathField
+      contents += new BorderPanel {
+        layout(new Label("targetPath")) = BorderPanel.Position.Center
+        layout(Button("Select") {
           val fc = new FileChooser()
-          fc.selectedFile = new File(targetPath)
+          fc.selectedFile = new File(targetPathField.text)
           fc.fileSelectionMode = SelectionMode.DirectoriesOnly
           val res: FileChooser.Result.Value = fc.showOpenDialog(this)
           if (res == FileChooser.Result.Approve) {
-            targetPath = fc.selectedFile.getAbsolutePath
-            loader.saveConf("extract-target", targetPath)
+            targetPathField.text = fc.selectedFile.getAbsolutePath
+            loader.saveConf("extract-root", targetPathField.text)
           }
-        }
+        }) = BorderPanel.Position.East
       }
-      contents += new Label(targetPath)
+      contents += targetPathField
       contents += new Label("listPath")
       contents += listPathField
       contents += new Label("abdataPath")
@@ -364,7 +363,17 @@ class ExtractDialog(loader: ConfLoader) extends Dialog {
   }
 
   def extract(): Unit = {
-    val listPath = Paths.get(rootPath, "abdata/list", listPathField.text)
+    val root = new File(rootPathField.text)
+    if (!root.exists() || !root.isDirectory) {
+      Dialog.showMessage(this, "Invalid Root", "Warn", Dialog.Message.Error)
+      return
+    }
+    val listFile = Paths.get(root.getAbsolutePath, "abdata/list", listPathField.text).toFile
+    if (!listFile.exists()) {
+      Dialog.showMessage(this, "List File Not Exists", "Warn", Dialog.Message.Error)
+      return
+    }
+
     Dialog.showMessage(this, "Wrong username or password!", "Login Error", Dialog.Message.Error)
   }
 
