@@ -9,12 +9,10 @@ import io.github.yuemenglong.orm.Orm
 import io.github.yuemenglong.orm.db.Db
 import io.github.yuemenglong.orm.lang.anno.{Entity, Id, OneToMany}
 import io.github.yuemenglong.orm.lang.types.Types._
-import javax.swing.{Box, JLabel, JPanel, JTextField}
 import javax.swing.table.DefaultTableModel
-import mm.ModManager.{lastChoose, mainPanel}
 
 import scala.collection.mutable.ArrayBuffer
-import scala.swing.Dialog.{Result, showConfirmation, showOptions}
+import scala.swing.Dialog.{Result, showConfirmation}
 import scala.swing.FileChooser.SelectionMode
 import scala.swing.event.{ButtonClicked, TableRowsSelected}
 import scala.swing.{FileChooser, _}
@@ -287,35 +285,22 @@ object ModManager extends SimpleSwingApplication {
   }
 
   def extract(): Unit = {
-    //    val fc = new FileChooser()
-    //    fc.fileSelectionMode = SelectionMode.DirectoriesOnly
-    //    fc.selectedFile = new File(loader.loadConf("last-choose", getAbsolutePath("")))
-    //    val res: FileChooser.Result.Value = fc.showOpenDialog(mainPanel)
-    //    if (res != FileChooser.Result.Approve) {
-    //      return
-    //    }
-    //    val extractPath = fc.selectedFile.getAbsolutePath
-    //    loader.saveConf("last-extract", extractPath)
-    //    val dialog = new Dialog(top)
-    //    dialog.contents = new Button("Close") {
-    //      dialog.close()
-    //    }
-    //    dialog.open()
     new ExtractDialog(loader)
-    println("asdf")
   }
 }
 
 class ExtractDialog(loader: ConfLoader) extends Dialog {
   var rootPathField = new TextField(loader.loadConf("extract-root", new File("").getAbsolutePath))
   var targetPathField = new TextField(loader.loadConf("extract-target", new File("").getAbsolutePath))
+  val nameField = new TextField
   val listPathField = new TextField
-  val abdataPathField = new TextField
+  val dataPathField = new TextField
 
   title = "Extract"
   modal = true
 
   contents = new BorderPanel {
+    preferredSize = new Dimension(800, 300)
     layout(new BoxPanel(Orientation.Vertical) {
       contents += new BorderPanel {
         layout(new Label("rootPath")) = BorderPanel.Position.Center
@@ -340,21 +325,24 @@ class ExtractDialog(loader: ConfLoader) extends Dialog {
           val res: FileChooser.Result.Value = fc.showOpenDialog(this)
           if (res == FileChooser.Result.Approve) {
             targetPathField.text = fc.selectedFile.getAbsolutePath
-            loader.saveConf("extract-root", targetPathField.text)
+            loader.saveConf("extract-target", targetPathField.text)
           }
         }) = BorderPanel.Position.East
       }
       contents += targetPathField
-      contents += new Label("listPath")
+      contents += new Label("Name")
+      contents += nameField
+      contents += new Label("ListPath")
       contents += listPathField
-      contents += new Label("abdataPath")
-      contents += abdataPathField
+      contents += new Label("DataPath")
+      contents += dataPathField
     }) = BorderPanel.Position.Center
 
     layout(new BoxPanel(Orientation.Horizontal) {
       contents += Button("Extract") {
-        extract()
-        close()
+        if (extract()) {
+          close()
+        }
       }
       contents += Button("Cancel") {
         close()
@@ -362,19 +350,67 @@ class ExtractDialog(loader: ConfLoader) extends Dialog {
     }) = BorderPanel.Position.South
   }
 
-  def extract(): Unit = {
-    val root = new File(rootPathField.text)
-    if (!root.exists() || !root.isDirectory) {
-      Dialog.showMessage(this, "Invalid Root", "Warn", Dialog.Message.Error)
-      return
-    }
-    val listFile = Paths.get(root.getAbsolutePath, "abdata/list", listPathField.text).toFile
-    if (!listFile.exists()) {
-      Dialog.showMessage(this, "List File Not Exists", "Warn", Dialog.Message.Error)
-      return
-    }
 
-    Dialog.showMessage(this, "Wrong username or password!", "Login Error", Dialog.Message.Error)
+  private def cp(srcFile: File, destFile: File, preserveFileDate: Boolean = false): Unit = {
+    import java.io.{FileInputStream, FileOutputStream, IOException}
+    val FILE_COPY_BUFFER_SIZE = 1024 * 64
+    val fis = new FileInputStream(srcFile)
+    val fos = new FileOutputStream(destFile)
+    val input = fis.getChannel
+    val output = fos.getChannel
+    val size: Long = input.size
+    var pos: Long = 0L
+    var count = 0L
+    try while (pos < size) {
+      count = if (size - pos > FILE_COPY_BUFFER_SIZE)
+        FILE_COPY_BUFFER_SIZE
+      else
+        size - pos
+      pos += output.transferFrom(input, pos, count)
+    } finally {
+      output.close()
+      fos.close()
+      input.close()
+      fis.close()
+    }
+    if (srcFile.length != destFile.length) throw new IOException("Failed to copy full contents from '" + srcFile + "' to '" + destFile + "'")
+    if (preserveFileDate) destFile.setLastModified(srcFile.lastModified)
+  }
+
+  def extract(): Boolean = {
+    val rootDir = new File(rootPathField.text)
+    if (!rootDir.exists() || !rootDir.isDirectory) {
+      Dialog.showMessage(this, "Invalid Root", "Warn", Dialog.Message.Error)
+      return false
+    }
+    val targetDir = new File(targetPathField.text)
+    if (!targetDir.exists() || !targetDir.isDirectory) {
+      Dialog.showMessage(this, "Invalid Target", "Warn", Dialog.Message.Error)
+      return false
+    }
+    val listFile = Paths.get(rootDir.getAbsolutePath, "abdata/list/characustom", listPathField.text).toFile
+    if (!listFile.exists() || !listFile.isFile) {
+      Dialog.showMessage(this, "List File Not Exists", "Warn", Dialog.Message.Error)
+      return false
+    }
+    val dataFile = Paths.get(rootDir.getAbsolutePath, dataPathField.text).toFile
+    if (!dataFile.exists() || !dataFile.isFile) {
+      Dialog.showMessage(this, "Data File Not Exists", "Warn", Dialog.Message.Error)
+      return false
+    }
+    val dstDir = Paths.get(targetDir.getAbsolutePath, nameField.text).toFile
+    if (dstDir.exists()) {
+      Dialog.showMessage(this, "Name Already Exists", "Warn", Dialog.Message.Error)
+      return false
+    }
+    val listDst = Paths.get(dstDir.getAbsolutePath, "abdata/list/characustom", listPathField.text).toFile
+    listDst.getParentFile.mkdirs()
+    cp(listFile, listDst)
+
+    val dataDst = Paths.get(dstDir.getAbsolutePath, dataPathField.text).toFile
+    dataDst.getParentFile.mkdirs()
+    cp(dataFile, dataDst)
+    true
   }
 
   //  centerOnScreen()
