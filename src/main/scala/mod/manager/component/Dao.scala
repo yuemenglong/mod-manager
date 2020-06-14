@@ -1,6 +1,7 @@
 package mod.manager.component
 
 import java.io.FileOutputStream
+import java.nio.file.Paths
 
 import javax.annotation.{PostConstruct, PreDestroy}
 import io.github.yuemenglong.json.JSON
@@ -26,6 +27,8 @@ class Dao {
   @Value("${db.max-conn}") private val maxConn = 1
   @Value("${db.partition}") private val partition = 1
 
+  @Value("${work.root}") private val workRoot = ""
+
   var db: Db = _
 
   @PostConstruct
@@ -35,7 +38,7 @@ class Dao {
     OrmTool.exportTsClass(new FileOutputStream("web/entity/entity.ts"))
     Orm.setLogger(true)
     JSON.setConstructorMap(OrmTool.getEmptyConstructorMap)
-    db = Orm.open(new SqliteConfig(database).setPoolArgs(minConn, maxConn, partition))
+    db = Orm.open(new SqliteConfig(Paths.get(workRoot, database).toFile.getAbsolutePath).setPoolArgs(minConn, maxConn, partition))
     //    db = Orm.open(new MysqlConfig(host, port, user, password, database, minConn, maxConn, partition))
     db.check()
   }
