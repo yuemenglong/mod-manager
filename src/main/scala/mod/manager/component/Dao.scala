@@ -26,8 +26,6 @@ class Dao {
   @Value("${db.max-conn}") private val maxConn = 1
   @Value("${db.partition}") private val partition = 1
 
-  @Value("${db.show-sql}") private val showSql: Boolean = true
-
   var db: Db = _
 
   @PostConstruct
@@ -35,7 +33,7 @@ class Dao {
     val list = Kit.scanPackage("mod.manager.entity")
     Orm.init(list)
     OrmTool.exportTsClass(new FileOutputStream("web/entity/entity.ts"))
-    Orm.setLogger(showSql)
+    Orm.setLogger(true)
     JSON.setConstructorMap(OrmTool.getEmptyConstructorMap)
     db = Orm.open(new SqliteConfig(database).setPoolArgs(minConn, maxConn, partition))
     //    db = Orm.open(new MysqlConfig(host, port, user, password, database, minConn, maxConn, partition))
