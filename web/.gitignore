@@ -1,0 +1,8 @@
+.idea/
+.next/
+mobx-test.iml
+node_modules/
+static/
+*.bat
+package-lock.json
+*.iml
