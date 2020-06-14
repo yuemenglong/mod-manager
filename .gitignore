@@ -6,3 +6,5 @@ mod-manager.iml
 node_mudules
 *.bat
 logs
+test
+.vscode

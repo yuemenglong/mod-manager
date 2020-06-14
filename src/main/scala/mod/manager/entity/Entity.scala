@@ -12,10 +12,6 @@ class Batch {
   var timestamp: String = _
   @OneToMany
   var files: Array[BatchFile] = Array()
-
-  def toRow: Array[Object] = Array(id, name, backup, timestamp)
-
-  def toModel: Array[Array[Object]] = files.map(f => Array[Object](f.id, f.path, f.act))
 }
 
 @Entity

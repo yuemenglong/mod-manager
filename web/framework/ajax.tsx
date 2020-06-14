@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { AxiosResponse } from "axios"
 import url from "url"
 import { hideLoading, showLoading } from "./loading";
 import { FileMeta } from "../entity/entity";
@@ -37,31 +37,31 @@ function handleError(err) {
   throw err
 }
 
-export function ajaxGet(url): Promise<any> {
+export function ajaxGet(url): Promise<AxiosResponse> {
   showLoading();
   return axios.get(url).catch(err => {
     handleError(err)
   }).finally(() => {
     hideLoading();
-  })
+  }) as any
 }
 
-export function ajaxPost(url, data): Promise<any> {
+export function ajaxPost(url, data): Promise<AxiosResponse> {
   showLoading();
   return axios.post(url, data).catch(err => {
     handleError(err)
   }).finally(() => {
     hideLoading();
-  })
+  }) as any
 }
 
-export function ajaxDelete(url): Promise<any> {
+export function ajaxDelete(url): Promise<AxiosResponse> {
   showLoading();
   return axios.delete(url).catch(err => {
     handleError(err)
   }).finally(() => {
     hideLoading();
-  })
+  }) as any
 }
 
 // 3种状态

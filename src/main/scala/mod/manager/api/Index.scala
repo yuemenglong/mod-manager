@@ -7,10 +7,11 @@ import java.util.Date
 
 import io.github.yuemenglong.json.JSON
 import io.github.yuemenglong.orm.Orm
+import io.github.yuemenglong.orm.tool.OrmTool
 import javax.annotation.PostConstruct
 import mod.manager.component.Dao
 import mod.manager.entity.{Batch, BatchFile}
-import mod.manager.util.{JsError, ParamError}
+import mod.manager.util.{JsError, ParamError, SystemError}
 import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.web.bind.annotation._
 
@@ -57,6 +58,17 @@ class Index {
     })
   }
 
+  def deleteDir(file: File): Unit = {
+    file.listFiles().foreach(f => {
+      if (f.isDirectory) {
+        deleteDir(f)
+      } else {
+        f.delete()
+      }
+    })
+    file.delete()
+  }
+
   @GetMapping(Array("/batch/list"))
   def getBatchList: String = dao.beginTransaction(session => {
     val root = Orm.root(classOf[Batch])
@@ -66,7 +78,7 @@ class Index {
   })
 
   @PostMapping(Array("/batch"))
-  def PostBatch(@RequestBody body: String): String = {
+  def postBatch(@RequestBody body: String): String = {
     val uploadName = JSON.parse(body).asObj().getStr("root")
     val uploadDir = Paths.get(modRoot, uploadName).toFile
     if (!uploadDir.isDirectory) {
@@ -107,37 +119,60 @@ class Index {
     JSON.stringifyJs(batch)
   }
 
-  //  @PostMapping(Array("/login"))
-  //  def login(@RequestParam verifyCode: String, @RequestBody body: String): String = {
-  //    val redisValue = RedisUtils.getStr(CacheKeys.VERIFY_CODE + verifyCode.trim.toUpperCase)
-  //    if (StrUtils.isNull(redisValue) || !Constant.CONSTANT_STR_ONE.equals(redisValue)) {
-  //      throw ParamError("验证码错误,请重新输入")
-  //    }
-  //    val user = JSON.parse(body, classOf[AuthUser])
-  //    if (user.username == null || user.password == null) {
-  //      throw AuthError("用户名或密码为空")
-  //    }
-  //    auth.login(user.username, user.password, "ADMIN")
-  //    "{}"
-  //  }
-  //  @GetMapping(Array("/login"))
-  //  def login(): String = {
-  //    auth.login("admin", "123456", "ADMIN")
-  //    "{}"
-  //  }
-  //
-  //  @GetMapping(Array("/logout"))
-  //  def logout(): String = {
-  //    try {
-  //      auth.logout()
-  //    } catch {
-  //      case e: Exception => e.printStackTrace()
-  //    }
-  //    "{}"
-  //  }
-  //
-  //  @GetMapping(Array("/user"))
-  //  def user(): String = {
-  //    JSON.stringifyJs(Map("id" -> auth.currentUserId()))
-  //  }
+  @DeleteMapping(Array("/batch"))
+  def deleteBatch(id: Integer): String = dao.beginTransaction(session => {
+    val batch = OrmTool.selectByIdEx(classOf[Batch], id, session)(root => root.select(_.files))
+    val ps = batch.files.map(_.path)
+    val res = {
+      val root = Orm.root(classOf[BatchFile])
+      session.query(Orm.selectFrom(root).where(root.get(_.path).in(ps).and(root.get(_.id).gt(batch.files.last.id))))
+    }
+    if (res.length > 0) {
+      throw ParamError("非最后安装版本,无法删除")
+    }
+    val ex = Orm.delete(batch)
+    ex.deleteArray(_.files)
+    session.execute(ex)
+
+    val trashName = s"${getTimeStr}"
+    batch.files.foreach(f => {
+      val filePath = Paths.get(gameRoot, f.path)
+      val trashPath = Paths.get(trashRoot, trashName, f.path)
+      trashPath.toFile.getParentFile.mkdirs()
+      try {
+        Files.move(filePath, trashPath)
+      } catch {
+        case e: Throwable => println(s"${e}\nMove Trash: ${filePath} To ${trashPath} Fail")
+          throw SystemError(e.toString)
+      }
+      if (f.act == "replace") {
+        val backupPath = Paths.get(backupRoot, batch.backup, f.path)
+        try {
+          Files.move(backupPath, filePath)
+        } catch {
+          case e: Throwable => println(s"${e}\nMove Backup: ${backupPath} To ${filePath} Fail")
+            throw SystemError(e.toString)
+        }
+      }
+    })
+    //    val backupRoot = Paths.get(backupDir, batch.backup)
+    try {
+      deleteDir(Paths.get(backupRoot, batch.backup).toFile)
+    } catch {
+      case e: Throwable => println(s"${e}\nDelete Backup: ${backupRoot} Fail")
+        throw SystemError(e.toString)
+    }
+    "{}"
+  })
+
+  @GetMapping(Array("/open"))
+  def openDir(name: String): String = {
+    val root = name match {
+      case "game" => gameRoot
+      case "backup" => backupRoot
+      case "trash" => trashRoot
+    }
+    Runtime.getRuntime.exec(s"cmd /c start explorer ${root}")
+    "{}"
+  }
 }

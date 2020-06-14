@@ -21,6 +21,6 @@ object App {
 @RestController
 class App {
   @PostConstruct def started(): Unit = {
-    TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+//    TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
   }
 }

@@ -17,7 +17,7 @@ export default class MyApp extends App<any, any> {
       <$RouterContext.Provider value={router}>
         <Container>
           <Head>
-            <title>线下订单</title>
+            <title>ModManager</title>
             <script src="/static/assets/js/patch.js" />
             <script src="/static/assets/js/polyfill.min.js" />
             <script src="/static/assets/js/es5-sham.min.js" />
