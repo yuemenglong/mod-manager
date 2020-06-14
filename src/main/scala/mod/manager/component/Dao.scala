@@ -34,7 +34,7 @@ class Dao {
   def init(): Unit = {
     val list = Kit.scanPackage("mod.manager.entity")
     Orm.init(list)
-    OrmTool.exportTsClass(new FileOutputStream("entity.ts"))
+    OrmTool.exportTsClass(new FileOutputStream("web/entity/entity.ts"))
     Orm.setLogger(showSql)
     JSON.setConstructorMap(OrmTool.getEmptyConstructorMap)
     db = Orm.open(new SqliteConfig(database).setPoolArgs(minConn, maxConn, partition))

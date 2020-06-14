@@ -5,3 +5,4 @@ db.sqlite
 mod-manager.iml
 node_mudules
 *.bat
+logs
