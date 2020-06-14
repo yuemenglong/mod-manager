@@ -59,6 +59,9 @@ class Index {
   }
 
   def deleteDir(file: File): Unit = {
+    if (!file.exists()) {
+      return
+    }
     file.listFiles().foreach(f => {
       if (f.isDirectory) {
         deleteDir(f)
@@ -155,11 +158,12 @@ class Index {
         }
       }
     })
-    //    val backupRoot = Paths.get(backupDir, batch.backup)
+    val backupDir = Paths.get(backupRoot, batch.backup)
     try {
-      deleteDir(Paths.get(backupRoot, batch.backup).toFile)
+      deleteDir(backupDir.toFile)
     } catch {
       case e: Throwable => println(s"${e}\nDelete Backup: ${backupRoot} Fail")
+        e.printStackTrace()
         throw SystemError(e.toString)
     }
     "{}"
@@ -168,10 +172,12 @@ class Index {
   @GetMapping(Array("/open"))
   def openDir(name: String): String = {
     val root = name match {
-      case "game" => gameRoot
+      case "game" => gameRoot.replace("/", "\\")
+      case "mod" => modRoot.replace("/", "\\")
       case "backup" => backupRoot
       case "trash" => trashRoot
     }
+    println(s"Open [${root}]")
     Runtime.getRuntime.exec(s"cmd /c start explorer ${root}")
     "{}"
   }

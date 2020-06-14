@@ -9,18 +9,7 @@ import { useEffect } from "react";
 
 const { Dragger } = Upload;
 
-const DraggerView = ({ onChange }) => {
-  return <Dragger showUploadList={false}
-    beforeUpload={(f, ) => {
-      onChange(f.name)
-      return false
-    }}>
-    <p style={{ height: "200px", fontSize: "30pt" }}>拖拽到这里</p>
-  </Dragger>
-}
-
 const Index = observer(() => {
-  let uploadDir = useBox(null)
   let list = useArray(new Array<Batch>())
   let [detail, detailSet] = useMobx<Batch>(null)
   useEffect(() => {
@@ -52,7 +41,9 @@ const Index = observer(() => {
   let modal = null
   if (detail != null) {
     modal = <Modal visible={true}
-      onOk={() => { detailSet(null) }}>
+      onOk={() => { detailSet(null) }}
+      onCancel={() => { detailSet(null) }}
+    >
       <Table dataSource={detail.files.slice()}
         rowKey="id"
         columns={[
@@ -63,22 +54,23 @@ const Index = observer(() => {
     </Modal>
   }
   return <div>
-    <DraggerView onChange={s => uploadDir.set(s)}></DraggerView>
-    <Input value={uploadDir.get()}></Input>
-    <Button onClick={() => {
-      if (uploadDir.get() != null) {
-        ajaxPost("/batch", { root: uploadDir.get() }).then(res => {
+    <Dragger showUploadList={false}
+      openFileDialogOnClick={false}
+      beforeUpload={(f, ) => {
+        ajaxPost("/batch", { root: f.name }).then(res => {
           list.push(res.data)
-          uploadDir.set(null)
         })
-      }
-    }}>上传</Button>
-    <Button onClick={() => { ajaxGet("/open?name=backup") }}>打开Backup</Button>
-    <Button onClick={() => { ajaxGet("/open?name=trash") }}>打开Trash</Button>
-    <Table dataSource={list.slice()}
-      rowKey={"id"}
-      columns={columns}
-    />
+        return false
+      }}>
+      <Button onClick={() => { ajaxGet("/open?name=game") }}>打开Game</Button>
+      <Button onClick={() => { ajaxGet("/open?name=mod") }}>打开Mod</Button>
+      <Button onClick={() => { ajaxGet("/open?name=backup") }}>打开Backup</Button>
+      <Button onClick={() => { ajaxGet("/open?name=trash") }}>打开Trash</Button>
+      <Table dataSource={list.slice()}
+        rowKey={"id"}
+        columns={columns}
+      />
+    </Dragger>
     {modal}
   </div>
 });
