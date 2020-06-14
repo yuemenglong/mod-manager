@@ -6,14 +6,12 @@ const backendProto = "http://";
 const backendUrl = "localhost:8080";
 const port = 3000;
 const site = "pc";
-const googleMapKey = "AIzaSyBWfDd0Wrwl44JNYxeUILT0AmsuCXpxULo";
 
 let defaultConfig = {
   site,
   backendProto,
   backendUrl,
-  port,
-  googleMapKey
+  port
 }
 
 let siteConfig = _.merge({}, defaultConfig, publicRuntimeConfig)
