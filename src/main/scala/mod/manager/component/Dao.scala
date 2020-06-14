@@ -18,15 +18,6 @@ import org.springframework.stereotype.Component
  */
 @Component
 class Dao {
-  @Value("${db.host}") private val host = ""
-  @Value("${db.port}") private val port = 0
-  @Value("${db.username}") private val user = ""
-  @Value("${db.password}") private val password = ""
-  @Value("${db.name}") private val database = ""
-  @Value("${db.min-conn}") private val minConn = 1
-  @Value("${db.max-conn}") private val maxConn = 1
-  @Value("${db.partition}") private val partition = 1
-
   @Value("${work.root}") private val workRoot = ""
 
   var db: Db = _
@@ -38,7 +29,7 @@ class Dao {
     OrmTool.exportTsClass(new FileOutputStream("web/entity/entity.ts"))
     Orm.setLogger(true)
     JSON.setConstructorMap(OrmTool.getEmptyConstructorMap)
-    db = Orm.open(new SqliteConfig(Paths.get(workRoot, database).toFile.getAbsolutePath).setPoolArgs(minConn, maxConn, partition))
+    db = Orm.open(new SqliteConfig(Paths.get(workRoot, "db.sqlite").toFile.getAbsolutePath).setPoolArgs(1, 1, 1))
     //    db = Orm.open(new MysqlConfig(host, port, user, password, database, minConn, maxConn, partition))
     db.check()
   }
