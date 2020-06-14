@@ -1,7 +1,6 @@
 import axios, { AxiosResponse } from "axios"
 import url from "url"
 import { hideLoading, showLoading } from "./loading";
-import { FileMeta } from "../entity/entity";
 import * as _ from "lodash"
 import { message } from "antd";
 import { getConfig } from "../site.config";
@@ -96,18 +95,6 @@ export function ajaxShareGet(url): Promise<any> {
 
 export function getBackendUrl(path) {
   return url.resolve(config.backendProto + config.backendUrl, path);
-}
-
-export function getFilePath(file: FileMeta): string {
-  if (!file || !file.path) return null
-  let fix = (s: string) => {
-    if (s.startsWith("/")) {
-      return s
-    } else {
-      return "/" + s
-    }
-  }
-  return (config.backendFileUrl || "") + fix("/static") + fix(file.root) + fix(file.path)
 }
 
 export function fetchData(namePathMap, ctx) {
