@@ -3,3 +3,8 @@ target/
 *.properties
 db.sqlite
 mod-manager.iml
+node_mudules
+*.bat
+logs
+test
+.vscode
