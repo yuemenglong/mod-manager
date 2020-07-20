@@ -56,7 +56,7 @@ const Index = observer(() => {
   return <div>
     <Dragger showUploadList={false}
       openFileDialogOnClick={false}
-      beforeUpload={(f, ) => {
+      beforeUpload={(f,) => {
         ajaxPost("/batch", { root: f.name }).then(res => {
           list.push(res.data)
         })
@@ -69,6 +69,7 @@ const Index = observer(() => {
       <Table dataSource={list.slice()}
         rowKey={"id"}
         columns={columns}
+        pagination={{ pageSize: 1000 }}
       />
     </Dragger>
     {modal}
